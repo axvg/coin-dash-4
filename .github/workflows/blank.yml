@@ -1,50 +1,49 @@
-name: Development Web build
-
-on:
-  push:
-    branches: [ main ]
-
-concurrency:
-  group: ci-${{github.actor}}-${{github.head_ref || github.run_number}}-${{github.ref}}-devweb
-  cancel-in-progress: true
+name: "Publish to GitHub Pages"
 
 env:
   GODOT_VERSION: 4.2.1
-  EXPORT_NAME: Coin Dash 4
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  export-web:
-    name: Web Export 🌐
+  deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     container:
-      image: docker://barichello/godot-ci:4.2.1
+      image: barichello/godot-ci:4.2.1
+
     steps:
-      - name: Checkout 🛎️
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Setup 💻
+
+      - name: Move HTML5 templates into position
         run: |
-          mkdir -v -p build/web ~/.local/share/godot/export_templates
+          mkdir -v -p ~/.local/share/godot/export_templates
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-      - name: Web Build 🔧
-        run: godot --headless -v --export-release "Web" ./build/web/index.html
-      - name: Install rsync 📚
+      - name: Create staging directory
+        run: mkdir -v -p build/web
+
+      - name: Build
+        run: godot -v --export-release --headless "Web" ../build/web/index.html project/project.godot
+
+      - name: Add coi-service-worker
         run: |
-          apt-get update && apt-get install -y rsync
-      # Workaround for SharedArrayBuffer support on GitHub Pages
-      # See: https://github.com/godotengine/godot-docs/issues/7084
-      - name: Enable SharedArrayBuffer for GitHub Pages
-        run: |
-          cd ./build/web
-          apt-get install -y curl
-          ls
-          curl -fsSL https://github.com/gzuidhof/coi-serviceworker/raw/master/coi-serviceworker.js > coi-serviceworker.js
-          sed -i 's#\(		<script src="index.js"></script>\)#		<script src="coi-serviceworker.js"></script>\n\1#g' ./build/web/index.html
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4
+          git clone https://github.com/gzuidhof/coi-serviceworker.git
+          mv coi-serviceworker/coi-serviceworker.js build/web/coi-serviceworker.js
+          sed -i '3 i <script src="coi-serviceworker.js"></script>' ../build/web/index.html
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3.9.3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          single-commit: true
-          folder: build/web # The folder the action should deploy.
-          target-folder: early_access
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          force_orphan: true
+          user_name: "github-ci[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: "Publish to gh-pages"
