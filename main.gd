@@ -40,6 +40,7 @@ func game_over():
 	$HUD.show_game_over()
 	$Player.die()
 
+
 func _on_game_timer_timeout():
 	time_left -= 1
 	$HUD.update_time(time_left)

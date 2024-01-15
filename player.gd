@@ -35,7 +35,7 @@ func start():
 	$AnimatedSprite2D.animation = "idle"
 
 func die():
-	$AnimatedSprite2D.animation("hurt")
+	$AnimatedSprite2D.animation = "hurt"
 	set_process(false)
 
 
