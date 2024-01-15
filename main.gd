@@ -2,6 +2,7 @@ extends Node
 
 @export var coin_scene : PackedScene
 @export var powerup_scene : PackedScene
+@export var cactus_scene : PackedScene
 @export var playtime = 30
 
 var level = 1
@@ -21,6 +22,7 @@ func _process(delta):
 		level += 1
 		time_left -= 5
 		spawn_coins()
+		spawn_cactus()
 		$PowerupTimer.wait_time = randf_range(5, 10)
 		$PowerupTimer.start()
 
@@ -44,10 +46,17 @@ func spawn_coins():
 		c.screensize = screensize
 		c.position = Vector2(randi_range(0, screensize.x), randi_range(0, screensize.y))
 
+func spawn_cactus():
+	for i in level + 1:
+		var c = cactus_scene.instantiate()
+		add_child(c)
+		c.position = Vector2(randi_range(0, screensize.x), randi_range(0, screensize.y))
+
 func game_over():
 	playing = false
 	$GameTimer.stop()
 	get_tree().call_group("coins", "queue_free")
+	get_tree().call_group("obstacles", "queue_free")
 	$HUD.show_game_over()
 	$Player.die()
 	$EndSound.play()
